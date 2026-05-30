@@ -158,8 +158,6 @@ description: panelMessage,
                 color: getColor('info')
            });
  
-            verifyEmbed.setImage('https://cdn.discordapp.com/attachments/1446187844061237334/1510412034397835335/ticket.png?ex=6a1cb853&is=6a1b66d3&hm=4e058b8fa809e59d8f20a07e5fddc58b854a58c73ebc2f4c2761dbdad363675a&');
-           
             const ticketButton = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("create_ticket")
