@@ -195,6 +195,8 @@ async function handleSetup(interaction, guild, client) {
             .setStyle(ButtonStyle.Primary)
     );
 
+    verifyEmbed.setImage('https://link-imaj-ou-an.png');
+    
     const verifyMessage = await verificationChannel.send({
         embeds: [verifyEmbed],
         components: [verifyButton]
