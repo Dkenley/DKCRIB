@@ -195,7 +195,7 @@ async function handleSetup(interaction, guild, client) {
             .setStyle(ButtonStyle.Primary)
     );
 
-    verifyEmbed.setImage('https://link-imaj-ou-an.png');
+    verifyEmbed.setImage('https://cdn.discordapp.com/attachments/1446187844061237334/1510712213974028420/Verify_DK_CRIB.png?ex=6a1dcfe3&is=6a1c7e63&hm=9333eb8ff48bb5c1133487ad989f768abc0b453da2ea69514169ea2ce9122954&');
     
     const verifyMessage = await verificationChannel.send({
         embeds: [verifyEmbed],
