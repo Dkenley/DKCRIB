@@ -1,134 +1,108 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logEvent } from '../../utils/moderation.js';
-import { logger } from '../../utils/logger.js';
-import { sanitizeMarkdown } from '../../utils/sanitization.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    MessageFlags
+} from 'discord.js';
 
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
 export default {
     data: new SlashCommandBuilder()
-        .setName("dm")
-        .setDescription("Send a direct message to a user (Staff only)")
-        .addUserOption(option =>
+        .setName("say")
+        .setDescription("Send an embed message to a channel")
+        .addChannelOption(option =>
             option
-                .setName("user")
-                .setDescription("The user to send a DM to")
+                .setName("channel")
+                .setDescription("Channel to send the message to")
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName("title")
+                .setDescription("Embed title")
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("message")
-                .setDescription("The message to send")
+                .setDescription("Embed message")
                 .setRequired(true)
         )
-        .addBooleanOption(option =>
+        .addStringOption(option =>
             option
-                .setName("anonymous")
-                .setDescription("Send the message anonymously (default: false)")
+                .setName("picture")
+                .setDescription("Image URL for the embed")
                 .setRequired(false)
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
-    category: "Moderation",
 
-    async execute(interaction, config, client) {
+    category: "Utility",
+
+    async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
+
         if (!deferSuccess) {
-            logger.warn(`DM interaction defer failed`, {
-                userId: interaction.user.id,
-                guildId: interaction.guildId,
-                commandName: 'dm'
-            });
+            logger.warn("Say command defer failed");
             return;
         }
 
-    const targetUser = interaction.options.getUser("user");
+        const channel = interaction.options.getChannel("channel");
+        const title = interaction.options.getString("title");
         const message = interaction.options.getString("message");
-        const anonymous = interaction.options.getBoolean("anonymous") || false;
+        const picture = interaction.options.getString("picture");
 
         try {
-            
-            if (message.length > 2000) {
+            if (!channel.isTextBased()) {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Message Too Long",
-                            "Messages must be under 2000 characters."
-                        ),
+                            "Invalid Channel",
+                            "Please select a text channel."
+                        )
                     ],
-                    flags: MessageFlags.Ephemeral,
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            
-            if (targetUser.bot) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Cannot DM Bot",
-                            "You cannot send DMs to bot accounts."
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+            const embed = {
+                title: title,
+                description: message,
+                color: 0x279CF5
+            };
+
+            if (picture) {
+                embed.image = {
+                    url: picture
+                };
             }
 
-            
-            const sanitized = sanitizeMarkdown(message);
-
-            const dmChannel = await targetUser.createDM();
-            
-            await dmChannel.send({
-                embeds: [
-                    successEmbed(
-                        anonymous ? "Message from the Staff Team" : `Message from ${interaction.user.tag}`,
-                        sanitized
-                    ).setFooter({
-                        text: `You cannot reply to this message. | Logger ID: ${interaction.id}`
-                    })
-                ]
-            });
-
-            await logEvent({
-                client: interaction.client,
-                guild: interaction.guild,
-                event: {
-                    action: "DM Sent",
-                    target: `${targetUser.tag} (${targetUser.id})`,
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}`,
-                    metadata: {
-                        userId: targetUser.id,
-                        moderatorId: interaction.user.id,
-                        anonymous,
-                        messageLength: sanitized.length
-                    }
-                }
+            await channel.send({
+                embeds: [embed]
             });
 
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "DM Sent",
-                        `Successfully sent a message to ${targetUser.tag}`
-                    ),
+                        "Message Sent",
+                        `Successfully sent embed to ${channel}`
+                    )
                 ],
+                flags: MessageFlags.Ephemeral
             });
+
         } catch (error) {
-            logger.error('DM command error:', error);
-            
-if (error.code === 50007) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed("Error", `Could not send a DM to ${targetUser.tag}. They may have DMs disabled.`),
-                    ],
-                });
-            }
-            
+            logger.error("Say command error:", error);
+
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
-                    errorEmbed("Error", `Failed to send DM: ${error.message}`),
-                ],
+                    errorEmbed(
+                        "Error",
+                        `Failed to send message: ${error.message}`
+                    )
+                ]
             });
         }
     }
